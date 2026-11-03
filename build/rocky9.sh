@@ -10,7 +10,7 @@ set -e
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; NC='\033[0m'
 
 # Variables
-XC_VM_DIR="/home/xc_vm"
+XC_VM_DIR="/home/uypanel"
 BUILD_DIR="/tmp/xc_vm_build"
 LOG_FILE="/tmp/xc_vm_build.log"
 VERSIONS_FILE="/build/versions.json"

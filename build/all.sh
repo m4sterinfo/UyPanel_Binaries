@@ -15,7 +15,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Variables
-XC_VM_DIR="/home/xc_vm"
+XC_VM_DIR="/home/uypanel"
 BUILD_DIR="/tmp/xc_vm_build"
 LOG_FILE="/tmp/xc_vm_build.log"
 VERSIONS_FILE="/build/versions.json"
