@@ -30,7 +30,7 @@ bash "$SCRIPT" "$@"
 
 echo "=== TESTING BINARIES ==="
 
-BIN_DIR="/home/xc_vm"
+BIN_DIR="/home/uypanel"
 TESTS_PASSED=0
 TESTS_FAILED=0
 
@@ -182,7 +182,7 @@ echo ""
 echo "=== PACKAGING BINARIES ==="
 
 OUT_DIR="/build/out"
-BIN_DIR="/home/xc_vm"
+BIN_DIR="/home/uypanel"
 ARCHIVE_NAME="${TARGET}.tar.gz"
 
 mkdir -p "$OUT_DIR"
