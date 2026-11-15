@@ -35,11 +35,13 @@ current_version() {
 check_nginx() {
     local cur
     cur=$(current_version nginx)
-    # Parse the download page for the latest stable version
+    # Parse the download page for the latest STABLE version (the page repeats
+    # the mainline version several times before the stable one — pick the
+    # first version that differs from the mainline)
     local latest
     latest=$(curl -fsSL --max-time 15 "https://nginx.org/en/download.html" \
         | grep -oP 'nginx-\K[0-9]+\.[0-9]+\.[0-9]+' \
-        | head -1)
+        | awk '!seen[$0]++' | sed -n '2p')
     if [[ -z "$latest" ]]; then
         echo -e "${YELLOW}[SKIP] nginx: could not fetch latest version${NC}"
         return
