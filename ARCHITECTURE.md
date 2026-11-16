@@ -1,16 +1,16 @@
-# XC_VM — Build Architecture
+# UyPanel — Build Architecture
 
-This document describes the architecture of the **XC_VM** build system, based on Docker containers,
+This document describes the architecture of the **UyPanel** build system, based on Docker containers,
 and explains the roles of all key components.
 
-The goal of the architecture is **reproducible, isolated building of XC_VM binaries**
+The goal of the architecture is **reproducible, isolated building of UyPanel binaries**
 for different Linux distributions without polluting the host system.
 
 ---
 
 ## General Idea
 
-The XC_VM build is performed according to the following principle:
+The UyPanel build is performed according to the following principle:
 
 1. A Docker image is created for each distribution
 2. A single entrypoint is launched inside the container
@@ -20,7 +20,7 @@ The XC_VM build is performed according to the following principle:
    * NGINX
    * NGINX + RTMP
    * PHP-FPM 8.3
-5. The result is assembled in `/home/xc_vm`
+5. The result is assembled in `/home/uypanel`
 6. Binaries are packed into `<target>.tar.gz` and passed to the host
 
 ---
@@ -40,7 +40,7 @@ build_all.sh (host)
       build/*.sh
             |
             v
-      /home/xc_vm
+      /home/uypanel
             |
             v
       out/<target>.tar.gz
@@ -178,7 +178,7 @@ Reasons for a separate script:
 After building, the following is formed inside the container:
 
 ```text
-/home/xc_vm
+/home/uypanel
 ├── bin/
 │   ├── nginx/
 │   ├── nginx_rtmp/

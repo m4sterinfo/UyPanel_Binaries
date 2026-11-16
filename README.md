@@ -1,6 +1,6 @@
-# XC_VM — Docker Build System
+# UyPanel — Docker Build System
 
-This repository contains a **universal XC_VM binary build system** in isolated Docker containers
+This repository contains a **universal UyPanel binary build system** in isolated Docker containers
 for different Linux distributions.
 
 The system is designed for **deterministic builds**:
@@ -11,7 +11,7 @@ The system is designed for **deterministic builds**:
 
 for specific distribution versions without polluting the host system.
 
-Each build outputs a `.tar.gz` archive with a ready-made XC_VM environment.
+Each build outputs a `.tar.gz` archive with a ready-made UyPanel runtime environment.
 
 ---
 
@@ -81,7 +81,7 @@ docker --version
 The following will happen sequentially:
 
 - Docker images will be built
-- XC_VM will be built inside the containers
+- UyPanel runtime will be built inside the containers
 - Automated tests will verify all binaries
 - Archives will be created
 
@@ -259,7 +259,7 @@ A universal build script that **automatically adapts to the OS inside the contai
 All binaries are installed in:
 
 ```text
-/home/xc_vm
+/home/uypanel
 ```
 
 ---
@@ -308,4 +308,4 @@ docker image prune -f
 
 ## License
 
-See the main XC_VM repository.
+See the main UyPanel repository (AGPL-3.0).

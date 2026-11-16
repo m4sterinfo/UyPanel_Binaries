@@ -4,12 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-A Docker-based, host-isolated build system that compiles XC_VM runtime **binaries** —
+A Docker-based, host-isolated build system that compiles UyPanel runtime **binaries** —
 `nginx`, `nginx_rtmp` (RTMP/FLV), and `php-fpm 8.3` (with ionCube and OPcache) — for several
 Linux distributions. There is no application source code here; the deliverable is one
-self-contained `out/<target>.tar.gz` per distribution. The private `xcvm_core` PHP extension
-is **not** built or bundled here — it is compiled/released from the `XC_VM_CoreExtention` repo
-and delivered separately (see below).
+self-contained `out/<target>.tar.gz` per distribution.
 
 ## Common commands
 
@@ -34,32 +32,13 @@ and delivered separately (see below).
 - `downloads/` self-prunes: after pre-download, `build_all.sh` deletes every file there that the
   current `versions.json` no longer names (old versions after a bump).
 
-## The xcvm_core extension is built elsewhere; this repo only receives it
-
-The extension is a Rust rewrite: a self-contained `xcvm_core.so` (no OpenSSL/libsodium
-linkage) coupled only to the PHP ABI version — **identical on every target**, same PHP source.
-So shipping a new extension never rebuilds `nginx`/`php`/`nginx_rtmp` — only the `.so`
-changes. **The build lives in the private extension repo** (`XC_VM_CoreExtention`): it
-compiles one `.so` **per PHP-version group** (`php8.1`, `php8.4`), load-tests each, and
-publishes a GitHub Release.
-
-This repo's only role is to **receive** those assets: `.github/workflows/sync-xcvm-core.yml`
-is triggered (repository_dispatch `xcvm_core_released`) by the extension repo's release,
-downloads the group archives with a private-read token (secret `XCVM_CORE_PAT`), overwrites them
-flat under `bin/xcvm_extention/` (fixed paths — no per-version dirs — plus `version.json` and
-`SHA256SUMS`), and stamps `versions.json → "xcvm_extention".version` (the single source of truth
-for the extension version). The private token stays in CI; customer
-servers only ever see this public repo. Servers hot-swap the `.so` and reload php-fpm
-(`kill -USR2`). Token setup/rotation is documented in the extension repo's `docs/10-release-ci.md`.
-
 ## There are no unit tests or linters
 
 The only "tests" are binary-validation checks baked into `docker/entrypoint.sh`, run inside the
 container after compilation and **before** packaging. If any check fails the build aborts and no
 archive is produced. They verify each binary exists, reports a sane version, and includes required
 modules/extensions (nginx http_ssl/v2/realip/etc., RTMP/FLV module, PHP `curl`/`mbstring`/`pdo_mysql`/
-`gd`/`opcache`/`sodium`/…). The `xcvm_core` extension is not built here, so it is not among these
-checks. To exercise them, run a build for the relevant target.
+`gd`/`opcache`/`sodium`/…). To exercise them, run a build for the relevant target.
 
 ## Architecture / control flow
 
@@ -73,7 +52,7 @@ build_all.sh (host)
                ├─ build/all.sh           Debian + Ubuntu (auto-adapts to distro/version)
                │   └─ rocky → build/rocky9.sh
                ├─ <binary validation tests>
-               └─ package /home/xc_vm → /build/out/<target>.tar.gz
+               └─ package /home/uypanel → /build/out/<target>.tar.gz
 ```
 
 Key conventions to preserve when editing:
@@ -83,12 +62,8 @@ Key conventions to preserve when editing:
   ordered **mirror list** tried in turn; `{VERSION}` and `{ARCH}` are substituted. `check_versions.sh`
   (and the weekly `.github/workflows/check-versions.yml` action) auto-bump versions and commit them.
 
-- **Build output goes to `/home/xc_vm/bin/{nginx,nginx_rtmp,php}/`** inside the container; the host's
+- **Build output goes to `/home/uypanel/bin/{nginx,nginx_rtmp,php}/`** inside the container; the host's
   `out/` is bind-mounted to `/build/out` to receive the archive.
-
-- **Private PHP extension (`xcvm_core`)** is neither built nor bundled here (see the section
-  "The xcvm_core extension is built elsewhere" above). The runtime build only produces the PHP
-  toolchain (`phpize`/`php-config`/headers) that the extension repo later compiles against.
 
 - **PHP extension ordering matters**: in `build/all.sh::main`, ionCube loads first, then OPcache —
   this order is reflected in php.ini and must be kept.

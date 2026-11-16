@@ -1,5 +1,5 @@
 #!/bin/bash
-# Script de compilación para XC_VM en Rocky Linux 9 / AlmaLinux 9 / RHEL 9
+# Script de compilación para UyPanel en Rocky Linux 9 / AlmaLinux 9 / RHEL 9
 # Autor: melcocha14@gmail.com  – adaptado Rocky 9
 # Versión: 1.9-r9
 # Fecha: 2025-12-22
@@ -10,9 +10,9 @@ set -e
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; NC='\033[0m'
 
 # Variables
-XC_VM_DIR="/home/uypanel"
-BUILD_DIR="/tmp/xc_vm_build"
-LOG_FILE="/tmp/xc_vm_build.log"
+UYPANEL_DIR="/home/uypanel"
+BUILD_DIR="/tmp/uypanel_build"
+LOG_FILE="/tmp/uypanel_build.log"
 VERSIONS_FILE="/build/versions.json"
 
 # Version variables (loaded from versions.json in load_versions)
@@ -124,8 +124,8 @@ check_system() {
 # Crear directorios
 setup_directories() {
     log "Configurando directorios..."
-    mkdir -p "$XC_VM_DIR/bin"
-    [[ -n "$SUDO_USER" ]] && chown -R "$SUDO_USER:$SUDO_USER" "$XC_VM_DIR"
+    mkdir -p "$UYPANEL_DIR/bin"
+    [[ -n "$SUDO_USER" ]] && chown -R "$SUDO_USER:$SUDO_USER" "$UYPANEL_DIR"
     mkdir -p "$BUILD_DIR"
     cd "$BUILD_DIR"
     log "Directorios configurados"
@@ -217,7 +217,7 @@ build_nginx() {
     cd nginx-${V_NGINX}
 
     ./configure \
-        --prefix="$XC_VM_DIR/bin/nginx" \
+        --prefix="$UYPANEL_DIR/bin/nginx" \
         --with-compat \
         --with-http_auth_request_module \
         --with-file-aio \
@@ -240,7 +240,7 @@ build_nginx() {
 
     make -j$(nproc)
     make install
-    _check_nginx_openssl "$XC_VM_DIR/bin/nginx/sbin/nginx"
+    _check_nginx_openssl "$UYPANEL_DIR/bin/nginx/sbin/nginx"
     log "NGINX estándar listo"
 }
 
@@ -256,7 +256,7 @@ build_nginx_rtmp() {
     grep -q NGX_USE_IOCP_EVENT src/event/ngx_event.h || rtmp_compat="-DNGX_USE_IOCP_EVENT=0"
 
     ./configure \
-        --prefix="$XC_VM_DIR/bin/nginx_rtmp" \
+        --prefix="$UYPANEL_DIR/bin/nginx_rtmp" \
         --add-module=../nginx-http-flv-module-${V_FLV_MODULE} \
         --with-compat \
         --with-http_auth_request_module \
@@ -277,8 +277,8 @@ build_nginx_rtmp() {
 
     make -j$(nproc)
     make install
-    mv "$XC_VM_DIR/bin/nginx_rtmp/sbin/nginx" "$XC_VM_DIR/bin/nginx_rtmp/sbin/nginx_rtmp"
-    _check_nginx_openssl "$XC_VM_DIR/bin/nginx_rtmp/sbin/nginx_rtmp"
+    mv "$UYPANEL_DIR/bin/nginx_rtmp/sbin/nginx" "$UYPANEL_DIR/bin/nginx_rtmp/sbin/nginx_rtmp"
+    _check_nginx_openssl "$UYPANEL_DIR/bin/nginx_rtmp/sbin/nginx_rtmp"
     log "NGINX-RTMP listo"
 }
 
@@ -295,10 +295,10 @@ build_php() {
     cd php-${V_PHP}
 
     ./configure \
-        --prefix="$XC_VM_DIR/bin/php" \
+        --prefix="$UYPANEL_DIR/bin/php" \
         --enable-fpm \
-        --with-fpm-user=xc_vm \
-        --with-fpm-group=xc_vm \
+        --with-fpm-user=uypanel \
+        --with-fpm-group=uypanel \
         --with-openssl \
         --with-zlib \
         --with-curl \
@@ -338,15 +338,15 @@ build_php() {
 
     make -j$(nproc)
     make install
-    cp php.ini-development "$XC_VM_DIR/bin/php/lib/php.ini"
-    cp sapi/fpm/php-fpm.conf "$XC_VM_DIR/bin/php/etc/php-fpm.conf.default"
-    cp sapi/fpm/www.conf "$XC_VM_DIR/bin/php/etc/php-fpm.d/www.conf.default"
+    cp php.ini-development "$UYPANEL_DIR/bin/php/lib/php.ini"
+    cp sapi/fpm/php-fpm.conf "$UYPANEL_DIR/bin/php/etc/php-fpm.conf.default"
+    cp sapi/fpm/www.conf "$UYPANEL_DIR/bin/php/etc/php-fpm.d/www.conf.default"
     log "PHP-FPM listo"
 }
 
 # Install the ionCube Loader. Required at runtime for ioncube_v1 modules
-# (IonCube-encoded PHP). The loader is a Zend extension and MUST load BEFORE the
-# separately-delivered xcvm_core.so — registered here right after build_php so it is
+# (IonCube-encoded PHP). The loader is a Zend extension and MUST load BEFORE any
+# other (zend_)extension — registered here right after build_php so it is
 # the first (zend_)extension line in php.ini.
 install_ioncube_loader() {
     log "Installing ionCube Loader..."
@@ -378,14 +378,14 @@ install_ioncube_loader() {
     fi
 
     local ext_dir
-    ext_dir="$("$XC_VM_DIR/bin/php/bin/php-config" --extension-dir)"
+    ext_dir="$("$UYPANEL_DIR/bin/php/bin/php-config" --extension-dir)"
     mkdir -p "$ext_dir"
     cp "$loader_so" "$ext_dir/ioncube_loader_lin_${php_mm}.so"
     chmod 0755 "$ext_dir/ioncube_loader_lin_${php_mm}.so"
 
-    echo "zend_extension=$ext_dir/ioncube_loader_lin_${php_mm}.so" >> "$XC_VM_DIR/bin/php/lib/php.ini"
+    echo "zend_extension=$ext_dir/ioncube_loader_lin_${php_mm}.so" >> "$UYPANEL_DIR/bin/php/lib/php.ini"
 
-    if "$XC_VM_DIR/bin/php/bin/php" -v 2>/dev/null | grep -qi 'ionCube'; then
+    if "$UYPANEL_DIR/bin/php/bin/php" -v 2>/dev/null | grep -qi 'ionCube'; then
         log "✓ ionCube Loader ${php_mm} installed and active ($ext_dir)"
     else
         warn "ionCube Loader installed but not detected by 'php -v' — check php.ini ordering"
@@ -402,9 +402,9 @@ install_ioncube_loader() {
 enable_opcache() {
     log "Enabling Zend OPcache..."
 
-    local php_ini="$XC_VM_DIR/bin/php/lib/php.ini"
+    local php_ini="$UYPANEL_DIR/bin/php/lib/php.ini"
     local ext_dir
-    ext_dir="$("$XC_VM_DIR/bin/php/bin/php-config" --extension-dir)"
+    ext_dir="$("$UYPANEL_DIR/bin/php/bin/php-config" --extension-dir)"
 
     if [[ ! -f "$ext_dir/opcache.so" ]]; then
         warn "opcache.so not found in $ext_dir — was PHP built with --enable-opcache?"
@@ -413,7 +413,7 @@ enable_opcache() {
 
     echo "zend_extension=$ext_dir/opcache.so" >> "$php_ini"
 
-    if "$XC_VM_DIR/bin/php/bin/php" -v 2>/dev/null | grep -qi 'Zend OPcache'; then
+    if "$UYPANEL_DIR/bin/php/bin/php" -v 2>/dev/null | grep -qi 'Zend OPcache'; then
         log "✓ Zend OPcache enabled ($ext_dir/opcache.so)"
     else
         warn "opcache.so registered but not detected by 'php -v' — check php.ini ordering"
@@ -425,7 +425,7 @@ create_network_py() {
     # Prefer the host-mounted cache, fall back to GitHub.
     if [[ -f /build/downloads/network.py ]]; then
         log "Using cached network.py from /build/downloads"
-        cp -f /build/downloads/network.py "$XC_VM_DIR/bin/network.py"
+        cp -f /build/downloads/network.py "$UYPANEL_DIR/bin/network.py"
         return 0
     fi
 
@@ -434,8 +434,8 @@ create_network_py() {
     # URL(s) come from versions.json (network_py).
     local u
     for u in $(_json_urls network_py); do
-        if curl -fsSL "$u" -o "$XC_VM_DIR/bin/network.py"; then
-            log "network.py successfully downloaded to $XC_VM_DIR/bin/network.py"
+        if curl -fsSL "$u" -o "$UYPANEL_DIR/bin/network.py"; then
+            log "network.py successfully downloaded to $UYPANEL_DIR/bin/network.py"
             return 0
         fi
     done
@@ -453,8 +453,8 @@ build_network_binary() {
     fi
 
     # Ensure bin directory exists
-    mkdir -p "$XC_VM_DIR/bin"
-    cd "$XC_VM_DIR/bin"
+    mkdir -p "$UYPANEL_DIR/bin"
+    cd "$UYPANEL_DIR/bin"
 
     # Always download fresh network.py
     create_network_py
@@ -473,7 +473,7 @@ build_network_binary() {
             chmod +x network
             rm -rf build dist network.spec __pycache__
 
-            log "✓ Binary network compiled: $XC_VM_DIR/bin/network"
+            log "✓ Binary network compiled: $UYPANEL_DIR/bin/network"
 
             # Verify the binary
             if [[ -f "./network" ]]; then
@@ -488,10 +488,8 @@ build_network_binary() {
     fi
 }
 
-# NOTE: the private PHP extension (xcvm_core) is NOT built here. It is compiled and
-# released from the XC_VM_CoreExtention repo and delivered separately (bin/xcvm_extention/,
-# see CLAUDE.md). This runtime build only provides the PHP toolchain the extension is
-# later compiled against.
+# NOTE: no private PHP extension is built or bundled here. This runtime build only
+# provides the PHP toolchain (phpize/php-config/headers) for external extensions.
 
 # _pecl_ext <pecl-package> <so-filename> — build/install one PECL extension and
 # register it in php.ini ONLY if its .so was actually produced. A failed build
@@ -513,7 +511,7 @@ _pecl_ext() {
         warn "Error downloading $tgz"
     fi
     if [[ -f "$ext_dir/$so" ]]; then
-        echo "extension=$so" >> "$XC_VM_DIR/bin/php/lib/php.ini"
+        echo "extension=$so" >> "$UYPANEL_DIR/bin/php/lib/php.ini"
         log "✓ $pkg installed ($ext_dir/$so)"
     else
         warn "✗ $pkg: $so not built/installed in $ext_dir — not adding to php.ini"
@@ -557,16 +555,16 @@ _ssh2_ext() {
         fetch_json pecl_ssh2 "ssh2-${ver}.tgz" "$ver"
         tar -xzf "ssh2-${ver}.tgz"
         cd "ssh2-${ver}"
-        "$XC_VM_DIR/bin/php/bin/phpize"
+        "$UYPANEL_DIR/bin/php/bin/phpize"
         # LIBS: configure's link probe against the static libssh2 needs its libraries too.
-        ./configure --with-php-config="$XC_VM_DIR/bin/php/bin/php-config" --with-ssh2="$LIBSSH2_PREFIX" LIBS="-lcrypto -lz"
+        ./configure --with-php-config="$UYPANEL_DIR/bin/php/bin/php-config" --with-ssh2="$LIBSSH2_PREFIX" LIBS="-lcrypto -lz"
         make -j$(nproc) SSH2_SHARED_LIBADD="-L$LIBSSH2_PREFIX/lib -lssh2 -lcrypto -lz"
         make install
     ); then
         warn "ssh2 build reported an error"
     fi
     if [[ -f "$ext_dir/ssh2.so" ]]; then
-        echo "extension=ssh2.so" >> "$XC_VM_DIR/bin/php/lib/php.ini"
+        echo "extension=ssh2.so" >> "$UYPANEL_DIR/bin/php/lib/php.ini"
         log "✓ ssh2 installed ($ext_dir/ssh2.so)"
     else
         warn "✗ ssh2: ssh2.so not built/installed in $ext_dir — not adding to php.ini"
@@ -578,9 +576,9 @@ install_php_extensions() {
     log "Installing PHP extensions..."
     cd "$BUILD_DIR"
 
-    export PATH="$XC_VM_DIR/bin/php/bin:$PATH"
+    export PATH="$UYPANEL_DIR/bin/php/bin:$PATH"
 
-    local pecl="$XC_VM_DIR/bin/php/bin/pecl"
+    local pecl="$UYPANEL_DIR/bin/php/bin/pecl"
     if [[ ! -x "$pecl" ]]; then
         warn "PECL not found at $pecl. Skipping extension installation."
         return 0
@@ -589,7 +587,7 @@ install_php_extensions() {
     log "Installing extensions with PECL..."
 
     local ext_dir
-    ext_dir="$("$XC_VM_DIR/bin/php/bin/php-config" --extension-dir)"
+    ext_dir="$("$UYPANEL_DIR/bin/php/bin/php-config" --extension-dir)"
     mkdir -p "$ext_dir"
 
     _pecl_ext maxminddb maxminddb.so
@@ -606,7 +604,7 @@ install_php_extensions() {
 verify_php_extensions() {
     log "Verifying PHP extensions..."
 
-    local php_bin="$XC_VM_DIR/bin/php/bin/php"
+    local php_bin="$UYPANEL_DIR/bin/php/bin/php"
     [[ -x "$php_bin" ]] || error "PHP binary not found at $php_bin — cannot verify extensions"
 
     # Names as printed by 'php -m' (matched case-insensitively, whole word).
@@ -637,7 +635,7 @@ verify_php_extensions() {
     # ssh2 must carry build_libssh2's libssh2 (rsa-sha2), linked in.
     local ssh2_libssh2 ssh2_so
     ssh2_libssh2="$("$php_bin" -i 2>/dev/null | sed -n 's/^libssh2 version => //p')"
-    ssh2_so="$("$XC_VM_DIR/bin/php/bin/php-config" --extension-dir)/ssh2.so"
+    ssh2_so="$("$UYPANEL_DIR/bin/php/bin/php-config" --extension-dir)/ssh2.so"
     if [[ "$ssh2_libssh2" != "$V_LIBSSH2" ]] || readelf -d "$ssh2_so" | grep -q 'libssh2'; then
         error "ssh2 must link libssh2 ${V_LIBSSH2} statically (built against '${ssh2_libssh2}'; see $LOG_FILE)"
     fi
@@ -654,7 +652,7 @@ verify_php_extensions() {
 
 # Main
 main() {
-    log "Iniciando compilación de XC_VM para Rocky Linux 9"
+    log "Iniciando compilación de UyPanel para Rocky Linux 9"
     load_versions
     check_root
     check_system
@@ -678,12 +676,12 @@ main() {
     # Free temp build directory
     rm -rf "$BUILD_DIR" 2>/dev/null || true
 
-    log "✅ Compilación finalizada en $XC_VM_DIR/bin"
+    log "✅ Compilación finalizada en $UYPANEL_DIR/bin"
 }
 
 # Flags
 case "$1" in
     -h|--help) echo "Uso: sudo $0 [-h|--help]"; exit 0 ;;
-    -c|--clean) rm -rf "$BUILD_DIR" "$XC_VM_DIR/bin"; exit 0 ;;
+    -c|--clean) rm -rf "$BUILD_DIR" "$UYPANEL_DIR/bin"; exit 0 ;;
     *) main ;;
 esac

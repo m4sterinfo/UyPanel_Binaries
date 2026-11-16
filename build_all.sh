@@ -149,9 +149,9 @@ prune_downloads() {
 # ----------------------
 # Build function
 # ----------------------
-# Compiler cache: each target gets a named Docker volume xcvm-ccache-<target>
+# Compiler cache: each target gets a named Docker volume uypanel-ccache-<target>
 # mounted at /ccache, so rebuilds recompile only sources that changed (e.g. a
-# nginx bump reuses all of PHP). Reset: docker volume rm xcvm-ccache-<target>.
+# nginx bump reuses all of PHP). Reset: docker volume rm uypanel-ccache-<target>.
 build() {
     local name=$1
     local base=$2
@@ -168,7 +168,7 @@ build() {
 
     docker build \
         --build-arg BASE_IMAGE="$base" \
-        -t "xcvm-builder:$name" \
+        -t "uypanel-builder:$name" \
         -f "$dockerfile" \
         "$ROOT_DIR" 2>&1 | tee "$logfile"
 
@@ -178,8 +178,8 @@ build() {
         -e TARGET="$target" \
         -v "$OUT_DIR:/build/out" \
         -v "$DOWNLOADS_DIR:/build/downloads:ro" \
-        -v "xcvm-ccache-$target:/ccache" \
-        "xcvm-builder:$name" 2>&1 | tee -a "$logfile"
+        -v "uypanel-ccache-$target:/ccache" \
+        "uypanel-builder:$name" 2>&1 | tee -a "$logfile"
 
     echo ">>> Log saved: $logfile"
 }
@@ -209,7 +209,7 @@ build_rocky() {
     echo ">>> IMAGE: rocky9 (log: $logfile)"
 
     docker build \
-        -t xcvm-builder:rocky9 \
+        -t uypanel-builder:rocky9 \
         -f "$DOCKER_DIR/rocky/Dockerfile" \
         "$ROOT_DIR" 2>&1 | tee "$logfile"
 
@@ -219,8 +219,8 @@ build_rocky() {
         -e TARGET=rocky_9 \
         -v "$OUT_DIR:/build/out" \
         -v "$DOWNLOADS_DIR:/build/downloads:ro" \
-        -v xcvm-ccache-rocky_9:/ccache \
-        xcvm-builder:rocky9 2>&1 | tee -a "$logfile"
+        -v uypanel-ccache-rocky_9:/ccache \
+        uypanel-builder:rocky9 2>&1 | tee -a "$logfile"
 
     echo ">>> Log saved: $logfile"
 }
@@ -294,4 +294,4 @@ if ls "$OUT_DIR"/*.tar.gz 1>/dev/null 2>&1; then
     echo ">>> Checksums saved: $OUT_DIR/hashes.md5"
 fi
 
-echo "=== XC_VM BUILD COMPLETED ==="
+echo "=== UYPANEL BUILD COMPLETED ==="

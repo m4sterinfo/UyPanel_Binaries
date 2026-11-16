@@ -160,8 +160,7 @@ else
     test_fail "php code execution failed"
 fi
 
-# The private PHP extension (xcvm_core) is not built or bundled here — it ships from
-# the XC_VM_CoreExtention repo and is delivered separately, so there is nothing to test.
+# No private PHP extension is built or bundled here — nothing extra to test.
 
 # ---------------------
 # Test Summary

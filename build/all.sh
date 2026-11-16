@@ -1,5 +1,5 @@
 #!/bin/bash
-# Compilation script for XC_VM on Debian 12/13 and Ubuntu 20.04/22.04/24.04
+# Compilation script for UyPanel on Debian 12/13 and Ubuntu 20.04/22.04/24.04
 # Author: melcocha14@gmail.com
 # Version: 1.8 (Improved with pipx and automatic detection of network.py)
 # Date: 2025-12-10
@@ -15,9 +15,9 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Variables
-XC_VM_DIR="/home/uypanel"
-BUILD_DIR="/tmp/xc_vm_build"
-LOG_FILE="/tmp/xc_vm_build.log"
+UYPANEL_DIR="/home/uypanel"
+BUILD_DIR="/tmp/uypanel_build"
+LOG_FILE="/tmp/uypanel_build.log"
 VERSIONS_FILE="/build/versions.json"
 DISTRO_TYPE=""  # Detected in check_system()
 
@@ -159,10 +159,10 @@ setup_directories() {
     log "Configuring directories..."
 
     # Create base directories
-    mkdir -p "$XC_VM_DIR/bin"
+    mkdir -p "$UYPANEL_DIR/bin"
     # Assign permissions to the user if it exists, if not, keep as root
     if id -u "$SUDO_USER" 2>/dev/null; then
-        chown -R $SUDO_USER:$SUDO_USER "$XC_VM_DIR"
+        chown -R $SUDO_USER:$SUDO_USER "$UYPANEL_DIR"
     fi
 
     # Create temporary build directory
@@ -419,7 +419,7 @@ build_nginx() {
     # Configure compilation
     log "Configuring NGINX..."
     ./configure \
-        --prefix="$XC_VM_DIR/bin/nginx" \
+        --prefix="$UYPANEL_DIR/bin/nginx" \
         --with-compat \
         --with-http_auth_request_module \
         --with-file-aio \
@@ -446,10 +446,10 @@ build_nginx() {
     make install
 
     # Verify installation
-    if [[ -f "$XC_VM_DIR/bin/nginx/sbin/nginx" ]]; then
+    if [[ -f "$UYPANEL_DIR/bin/nginx/sbin/nginx" ]]; then
         log "NGINX compiled successfully"
-        "$XC_VM_DIR/bin/nginx/sbin/nginx" -V
-        _check_nginx_openssl "$XC_VM_DIR/bin/nginx/sbin/nginx"
+        "$UYPANEL_DIR/bin/nginx/sbin/nginx" -V
+        _check_nginx_openssl "$UYPANEL_DIR/bin/nginx/sbin/nginx"
     else
         error "NGINX was not compiled correctly"
     fi
@@ -473,7 +473,7 @@ build_nginx_rtmp() {
 
     log "Configuring NGINX with RTMP..."
     ./configure \
-        --prefix="$XC_VM_DIR/bin/nginx_rtmp" \
+        --prefix="$UYPANEL_DIR/bin/nginx_rtmp" \
         --add-module=../nginx-http-flv-module-${V_FLV_MODULE} \
         --with-compat \
         --with-http_ssl_module \
@@ -500,9 +500,9 @@ build_nginx_rtmp() {
     make install
 
     # Rename executable
-    if [[ -f "$XC_VM_DIR/bin/nginx_rtmp/sbin/nginx" ]]; then
-        mv "$XC_VM_DIR/bin/nginx_rtmp/sbin/nginx" "$XC_VM_DIR/bin/nginx_rtmp/sbin/nginx_rtmp"
-        _check_nginx_openssl "$XC_VM_DIR/bin/nginx_rtmp/sbin/nginx_rtmp"
+    if [[ -f "$UYPANEL_DIR/bin/nginx_rtmp/sbin/nginx" ]]; then
+        mv "$UYPANEL_DIR/bin/nginx_rtmp/sbin/nginx" "$UYPANEL_DIR/bin/nginx_rtmp/sbin/nginx_rtmp"
+        _check_nginx_openssl "$UYPANEL_DIR/bin/nginx_rtmp/sbin/nginx_rtmp"
         log "NGINX RTMP compiled successfully"
     else
         warn "Could not find NGINX RTMP binary"
@@ -537,10 +537,10 @@ build_php() {
     # Configure compilation
     log "Configuring PHP..."
     ./configure \
-        --prefix="$XC_VM_DIR/bin/php" \
+        --prefix="$UYPANEL_DIR/bin/php" \
         --enable-fpm \
-        --with-fpm-user=xc_vm \
-        --with-fpm-group=xc_vm \
+        --with-fpm-user=uypanel \
+        --with-fpm-group=uypanel \
         --with-openssl \
         --with-zlib \
         --with-curl \
@@ -583,14 +583,14 @@ build_php() {
     make install
 
     # Verify sodium extension availability
-    if ! "$XC_VM_DIR/bin/php/bin/php" -m | grep -qi '^sodium$'; then
+    if ! "$UYPANEL_DIR/bin/php/bin/php" -m | grep -qi '^sodium$'; then
         error "PHP sodium extension not available. Check libsodium-dev and rebuild."
     fi
 
     # Copy configuration files
-    cp php.ini-development "$XC_VM_DIR/bin/php/lib/php.ini"
-    cp sapi/fpm/php-fpm.conf "$XC_VM_DIR/bin/php/etc/php-fpm.conf.default"
-    cp sapi/fpm/www.conf "$XC_VM_DIR/bin/php/etc/php-fpm.d/www.conf.default"
+    cp php.ini-development "$UYPANEL_DIR/bin/php/lib/php.ini"
+    cp sapi/fpm/php-fpm.conf "$UYPANEL_DIR/bin/php/etc/php-fpm.conf.default"
+    cp sapi/fpm/www.conf "$UYPANEL_DIR/bin/php/etc/php-fpm.d/www.conf.default"
 
     log "PHP-FPM compiled and installed"
 }
@@ -602,9 +602,9 @@ install_php_extensions() {
     cd "$BUILD_DIR"
 
     # Set PATH for PHP
-    export PATH="$XC_VM_DIR/bin/php/bin:$PATH"
+    export PATH="$UYPANEL_DIR/bin/php/bin:$PATH"
 
-    local pecl="$XC_VM_DIR/bin/php/bin/pecl"
+    local pecl="$UYPANEL_DIR/bin/php/bin/pecl"
     if [[ ! -x "$pecl" ]]; then
         warn "PECL not found at $pecl. Skipping extension installation."
         return 0
@@ -613,7 +613,7 @@ install_php_extensions() {
     log "Installing extensions with PECL..."
 
     local ext_dir
-    ext_dir="$("$XC_VM_DIR/bin/php/bin/php-config" --extension-dir)"
+    ext_dir="$("$UYPANEL_DIR/bin/php/bin/php-config" --extension-dir)"
     mkdir -p "$ext_dir"
 
     _pecl_ext maxminddb maxminddb.so
@@ -642,7 +642,7 @@ _pecl_ext() {
         echo "yes" | "$pecl" install "$BUILD_DIR/$tgz" || warn "pecl install $pkg reported an error"
     fi
     if [[ -f "$ext_dir/$so" ]]; then
-        echo "extension=$so" >> "$XC_VM_DIR/bin/php/lib/php.ini"
+        echo "extension=$so" >> "$UYPANEL_DIR/bin/php/lib/php.ini"
         log "✓ $pkg installed ($ext_dir/$so)"
     else
         warn "✗ $pkg: $so not built/installed in $ext_dir — not adding to php.ini"
@@ -688,16 +688,16 @@ _ssh2_ext() {
         download_json pecl_ssh2 "ssh2-${ver}.tgz" "$ver"
         tar -xzf "ssh2-${ver}.tgz"
         cd "ssh2-${ver}"
-        "$XC_VM_DIR/bin/php/bin/phpize"
+        "$UYPANEL_DIR/bin/php/bin/phpize"
         # LIBS: configure's link probe against the static libssh2 needs its libraries too.
-        ./configure --with-php-config="$XC_VM_DIR/bin/php/bin/php-config" --with-ssh2="$LIBSSH2_PREFIX" LIBS="-lcrypto -lz"
+        ./configure --with-php-config="$UYPANEL_DIR/bin/php/bin/php-config" --with-ssh2="$LIBSSH2_PREFIX" LIBS="-lcrypto -lz"
         make -j$(nproc) SSH2_SHARED_LIBADD="-L$LIBSSH2_PREFIX/lib -lssh2 -lcrypto -lz"
         make install
     ); then
         warn "ssh2 build reported an error"
     fi
     if [[ -f "$ext_dir/ssh2.so" ]]; then
-        echo "extension=ssh2.so" >> "$XC_VM_DIR/bin/php/lib/php.ini"
+        echo "extension=ssh2.so" >> "$UYPANEL_DIR/bin/php/lib/php.ini"
         log "✓ ssh2 installed ($ext_dir/ssh2.so)"
     else
         warn "✗ ssh2: ssh2.so not built/installed in $ext_dir — not adding to php.ini"
@@ -710,7 +710,7 @@ _ssh2_ext() {
 verify_php_extensions() {
     log "Verifying PHP extensions..."
 
-    local php_bin="$XC_VM_DIR/bin/php/bin/php"
+    local php_bin="$UYPANEL_DIR/bin/php/bin/php"
     [[ -x "$php_bin" ]] || error "PHP binary not found at $php_bin — cannot verify extensions"
 
     # Names as printed by 'php -m' (matched case-insensitively, whole word).
@@ -742,7 +742,7 @@ verify_php_extensions() {
     # distro one, which the server would have to provide and could be too old.
     local ssh2_libssh2 ssh2_so
     ssh2_libssh2="$("$php_bin" -i 2>/dev/null | sed -n 's/^libssh2 version => //p')"
-    ssh2_so="$("$XC_VM_DIR/bin/php/bin/php-config" --extension-dir)/ssh2.so"
+    ssh2_so="$("$UYPANEL_DIR/bin/php/bin/php-config" --extension-dir)/ssh2.so"
     if [[ "$ssh2_libssh2" != "$V_LIBSSH2" ]] || readelf -d "$ssh2_so" | grep -q 'libssh2'; then
         error "ssh2 must link libssh2 ${V_LIBSSH2} statically (built against '${ssh2_libssh2}'; see $LOG_FILE)"
     fi
@@ -759,9 +759,9 @@ verify_php_extensions() {
 
 # Function to install the ionCube Loader.
 # Required at runtime for ioncube_v1 modules (which ship as IonCube-encoded
-# PHP). The loader is a Zend extension and MUST load BEFORE the separately-delivered
-# xcvm_core.so — we register it here, right after build_php and before any other
-# (zend_)extension is appended to php.ini, so it is always the first one PHP loads.
+# PHP). The loader is a Zend extension and MUST load BEFORE any other
+# (zend_)extension is appended to php.ini — we register it here, right after
+# build_php, so it is always the first one PHP loads.
 install_ioncube_loader() {
     log "Installing ionCube Loader..."
 
@@ -795,15 +795,15 @@ install_ioncube_loader() {
     fi
 
     local ext_dir
-    ext_dir="$("$XC_VM_DIR/bin/php/bin/php-config" --extension-dir)"
+    ext_dir="$("$UYPANEL_DIR/bin/php/bin/php-config" --extension-dir)"
     mkdir -p "$ext_dir"
     cp "$loader_so" "$ext_dir/ioncube_loader_lin_${php_mm}.so"
     chmod 0755 "$ext_dir/ioncube_loader_lin_${php_mm}.so"
 
-    echo "zend_extension=$ext_dir/ioncube_loader_lin_${php_mm}.so" >> "$XC_VM_DIR/bin/php/lib/php.ini"
+    echo "zend_extension=$ext_dir/ioncube_loader_lin_${php_mm}.so" >> "$UYPANEL_DIR/bin/php/lib/php.ini"
 
     # Verify the loader is recognised (CLI uses the same php.ini).
-    if "$XC_VM_DIR/bin/php/bin/php" -v 2>/dev/null | grep -qi 'ionCube'; then
+    if "$UYPANEL_DIR/bin/php/bin/php" -v 2>/dev/null | grep -qi 'ionCube'; then
         log "✓ ionCube Loader ${php_mm} installed and active ($ext_dir)"
     else
         warn "ionCube Loader installed but not detected by 'php -v' — check php.ini ordering"
@@ -820,9 +820,9 @@ install_ioncube_loader() {
 enable_opcache() {
     log "Enabling Zend OPcache..."
 
-    local php_ini="$XC_VM_DIR/bin/php/lib/php.ini"
+    local php_ini="$UYPANEL_DIR/bin/php/lib/php.ini"
     local ext_dir
-    ext_dir="$("$XC_VM_DIR/bin/php/bin/php-config" --extension-dir)"
+    ext_dir="$("$UYPANEL_DIR/bin/php/bin/php-config" --extension-dir)"
 
     if [[ ! -f "$ext_dir/opcache.so" ]]; then
         warn "opcache.so not found in $ext_dir — was PHP built with --enable-opcache?"
@@ -831,7 +831,7 @@ enable_opcache() {
 
     echo "zend_extension=$ext_dir/opcache.so" >> "$php_ini"
 
-    if "$XC_VM_DIR/bin/php/bin/php" -v 2>/dev/null | grep -qi 'Zend OPcache'; then
+    if "$UYPANEL_DIR/bin/php/bin/php" -v 2>/dev/null | grep -qi 'Zend OPcache'; then
         log "✓ Zend OPcache enabled ($ext_dir/opcache.so)"
     else
         warn "opcache.so registered but not detected by 'php -v' — check php.ini ordering"
@@ -843,7 +843,7 @@ create_network_py() {
     # Prefer the host-mounted cache, fall back to GitHub.
     if [[ -f /build/downloads/network.py ]]; then
         log "Using cached network.py from /build/downloads"
-        cp -f /build/downloads/network.py "$XC_VM_DIR/bin/network.py"
+        cp -f /build/downloads/network.py "$UYPANEL_DIR/bin/network.py"
         return 0
     fi
 
@@ -852,8 +852,8 @@ create_network_py() {
     # URL(s) come from versions.json (network_py).
     local u
     for u in $(_json_urls network_py); do
-        if curl -fsSL "$u" -o "$XC_VM_DIR/bin/network.py"; then
-            log "network.py successfully downloaded to $XC_VM_DIR/bin/network.py"
+        if curl -fsSL "$u" -o "$UYPANEL_DIR/bin/network.py"; then
+            log "network.py successfully downloaded to $UYPANEL_DIR/bin/network.py"
             return 0
         fi
     done
@@ -871,8 +871,8 @@ build_network_binary() {
     fi
 
     # Ensure bin directory exists
-    mkdir -p "$XC_VM_DIR/bin"
-    cd "$XC_VM_DIR/bin"
+    mkdir -p "$UYPANEL_DIR/bin"
+    cd "$UYPANEL_DIR/bin"
 
     # Always download fresh network.py
     create_network_py
@@ -891,7 +891,7 @@ build_network_binary() {
             chmod +x network
             rm -rf build dist network.spec __pycache__
 
-            log "✓ Binary network compiled: $XC_VM_DIR/bin/network"
+            log "✓ Binary network compiled: $UYPANEL_DIR/bin/network"
 
             # Verify the binary
             if [[ -f "./network" ]]; then
@@ -906,10 +906,8 @@ build_network_binary() {
     fi
 }
 
-# NOTE: the private PHP extension (xcvm_core) is NOT built here. It is compiled and
-# released from the XC_VM_CoreExtention repo and delivered separately (bin/xcvm_extention/,
-# see CLAUDE.md). This runtime build only provides the PHP toolchain the extension is
-# later compiled against.
+# NOTE: no private PHP extension is built or bundled here. This runtime build only
+# provides the PHP toolchain (phpize/php-config/headers) for external extensions.
 
 # Function to clean up temporary files
 cleanup() {
@@ -938,34 +936,34 @@ show_summary() {
     log "============================================"
     log "         COMPILATION COMPLETED"
     log "============================================"
-    log "Compiled files available in: $XC_VM_DIR/bin/"
+    log "Compiled files available in: $UYPANEL_DIR/bin/"
     log ""
 
     # Verify standard NGINX
-    if [[ -f "$XC_VM_DIR/bin/nginx/sbin/nginx" ]]; then
-        info "✓ Standard NGINX: $XC_VM_DIR/bin/nginx/sbin/nginx"
-        info "  Verify: $XC_VM_DIR/bin/nginx/sbin/nginx -V"
+    if [[ -f "$UYPANEL_DIR/bin/nginx/sbin/nginx" ]]; then
+        info "✓ Standard NGINX: $UYPANEL_DIR/bin/nginx/sbin/nginx"
+        info "  Verify: $UYPANEL_DIR/bin/nginx/sbin/nginx -V"
     else
         warn "✗ Standard NGINX not found"
     fi
 
     # Verify NGINX RTMP
-    if [[ -f "$XC_VM_DIR/bin/nginx_rtmp/sbin/nginx_rtmp" ]]; then
-        info "✓ NGINX with RTMP: $XC_VM_DIR/bin/nginx_rtmp/sbin/nginx_rtmp"
+    if [[ -f "$UYPANEL_DIR/bin/nginx_rtmp/sbin/nginx_rtmp" ]]; then
+        info "✓ NGINX with RTMP: $UYPANEL_DIR/bin/nginx_rtmp/sbin/nginx_rtmp"
     else
         warn "✗ NGINX RTMP not found"
     fi
 
     # Verify PHP
-    if [[ -f "$XC_VM_DIR/bin/php/sbin/php-fpm" ]]; then
-        info "✓ PHP-FPM: $XC_VM_DIR/bin/php/sbin/php-fpm"
+    if [[ -f "$UYPANEL_DIR/bin/php/sbin/php-fpm" ]]; then
+        info "✓ PHP-FPM: $UYPANEL_DIR/bin/php/sbin/php-fpm"
     else
         warn "✗ PHP-FPM not found"
     fi
 
     # Verify network binary
-    if [[ -f "$XC_VM_DIR/bin/network" ]]; then
-        info "✓ Binary network: $XC_VM_DIR/bin/network"
+    if [[ -f "$UYPANEL_DIR/bin/network" ]]; then
+        info "✓ Binary network: $UYPANEL_DIR/bin/network"
     else
         warn "✗ Binary network not found"
     fi
@@ -977,7 +975,7 @@ show_summary() {
 
 # Main compilation function
 main() {
-    log "Starting XC_VM compilation"
+    log "Starting UyPanel compilation"
 
     # Load version config
     load_versions
@@ -1021,6 +1019,6 @@ main() {
 # Flags
 case "$1" in
     -h|--help) echo "Uso: sudo $0 [-h|--help]"; exit 0 ;;
-    -c|--clean) rm -rf "$BUILD_DIR" "$XC_VM_DIR/bin"; exit 0 ;;
+    -c|--clean) rm -rf "$BUILD_DIR" "$UYPANEL_DIR/bin"; exit 0 ;;
     *) main ;;
 esac
