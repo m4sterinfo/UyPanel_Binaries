@@ -25,8 +25,8 @@ self-contained `out/<target>.tar.gz` per distribution.
 - A target is **skipped** if its `out/<target>.tar.gz` already exists. Delete the archive to force a rebuild.
 - Build dependencies are baked into the image layer from `build/deps_debian.sh` / `build/deps_rocky9.sh`
   (cached by Docker; refresh with `docker build --no-cache` or `docker builder prune`).
-- Compiler output is cached by ccache in per-target Docker volumes `xcvm-ccache-<target>`;
-  `docker volume rm xcvm-ccache-<target>` resets one.
+- Compiler output is cached by ccache in per-target Docker volumes `uypanel-ccache-<target>`;
+  `docker volume rm uypanel-ccache-<target>` resets one.
 - Per-target build logs land in `logs/<target>.log`.
 - `out/`, `logs/`, and `downloads/` are gitignored (build artifacts / caches).
 - `downloads/` self-prunes: after pre-download, `build_all.sh` deletes every file there that the
